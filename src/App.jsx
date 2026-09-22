@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 
 // Data Defaults
 import { DEFAULT_SETTINGS, DEFAULT_BATCHES, DEFAULT_ORDERS, DEFAULT_EXPENSES } from './data/dummyData';
@@ -14,12 +15,14 @@ import { getMetricsController } from './controllers/metricsController';
 import { getCurrentAuthUser, signIn, signOut, subscribeToAuthChanges } from './services/authService';
 
 import { isSupabaseConfigured } from './utils/supabaseClient';
+import { nextLocalOrderNumber } from './utils/orderNumber';
 
 // Routes & Layout
 import AppRoutes from './routes/AppRoutes';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Toast from './components/common/Toast';
+import ThemeSwitcher from './components/common/ThemeSwitcher';
 
 // Modals
 import OrderModal from './components/modals/OrderModal';
@@ -65,6 +68,33 @@ export default function App() {
 
   // Toast Notification banner
   const [toast, setToast] = useState(null);
+  const deletePromptOpenRef = useRef(false);
+
+  const confirmDelete = async (detail) => {
+    if (deletePromptOpenRef.current) return false;
+    deletePromptOpenRef.current = true;
+    try {
+      const dark = document.documentElement.dataset.theme === 'dark';
+      const result = await Swal.fire({
+        title: 'Apakah Anda yakin mau hapus data ini?',
+        text: detail,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya',
+        cancelButtonText: 'Tidak',
+        confirmButtonColor: '#be123c',
+        cancelButtonColor: '#475569',
+        background: dark ? '#172235' : '#ffffff',
+        color: dark ? '#e2e8f0' : '#1e293b',
+        reverseButtons: true,
+        focusCancel: true,
+        heightAuto: false,
+      });
+      return result.isConfirmed;
+    } finally {
+      deletePromptOpenRef.current = false;
+    }
+  };
 
   const triggerToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -109,9 +139,10 @@ export default function App() {
   }, [authUserId]);
 
   // Update State & Storage Wrappers
-  const setSettings = async (newSettings) => {
-    await saveSettingsController(newSettings);
-    setSettingsState(newSettings);
+  const setSettings = async (newSettings, logoFile) => {
+    const savedSettings = await saveSettingsController(newSettings, logoFile);
+    setSettingsState(savedSettings);
+    return savedSettings;
   };
 
   const setBatches = (newBatches) => {
@@ -203,10 +234,12 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col md:flex-row">
       {/* Toast Notification */}
       <Toast toast={toast} />
+      <ThemeSwitcher />
 
       {/* Mobile Top Header Bar */}
       <Header
         settings={settings}
+        batches={batches}
         selectedBatchId={selectedBatchId}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -251,7 +284,7 @@ export default function App() {
               <span className="bg-teal-100 text-teal-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">
                 {selectedBatchId === 'ALL'
                   ? 'Semua Batch'
-                  : batches.find((b) => b.id === selectedBatchId)?.name || selectedBatchId}
+                  : batches.find((b) => b.id === selectedBatchId)?.name || 'Batch tidak ditemukan'}
               </span>
               <span className="text-xs text-slate-400">• Rute Antarkota</span>
             </div>
@@ -305,6 +338,7 @@ export default function App() {
           settings={settings}
           setSettings={setSettings}
           triggerToast={triggerToast}
+          confirmDelete={confirmDelete}
           setEditingOrder={setEditingOrder}
           setShowOrderModal={setShowOrderModal}
           setShowExpenseModal={setShowExpenseModal}
@@ -337,17 +371,20 @@ export default function App() {
           batches={batches}
           selectedBatchId={selectedBatchId}
           onClose={() => setShowOrderModal(false)}
+          confirmDelete={confirmDelete}
           onSave={async (orderData) => {
             if (editingOrder) {
               const updatedObj = { ...editingOrder, ...orderData };
-              await saveOrderController(updatedObj);
-              setOrders(orders.map((o) => (o.id === editingOrder.id ? updatedObj : o)));
+              const savedOrder = await saveOrderController(updatedObj);
+              setOrders(orders.map((o) => (o.id === editingOrder.id ? savedOrder || updatedObj : o)));
               triggerToast('Pesanan berhasil diperbarui');
             } else {
               const newId = 'ORD-' + crypto.randomUUID();
-              const newObj = { id: newId, date: new Date().toISOString().split('T')[0], ...orderData };
-              await saveOrderController(newObj);
-              setOrders([newObj, ...orders]);
+              const now = new Date();
+              const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+              const newObj = { id: newId, date, ...orderData, ...(!isSupabaseConfigured ? { orderNo: nextLocalOrderNumber(orders, date) } : {}) };
+              const savedOrder = await saveOrderController(newObj);
+              setOrders([savedOrder || newObj, ...orders]);
               triggerToast('Pesanan baru ditambahkan');
             }
             setShowOrderModal(false);
@@ -413,7 +450,7 @@ export default function App() {
       {settlementPartner && (
         <SettlementModal
           partner={settlementPartner.name}
-          batchName={selectedBatchId === 'ALL' ? 'Semua Batch' : batches.find((batch) => batch.id === selectedBatchId)?.name || selectedBatchId}
+          batchName={selectedBatchId === 'ALL' ? 'Semua Batch' : batches.find((batch) => batch.id === selectedBatchId)?.name || 'Batch tidak ditemukan'}
           maxAmount={settlementPartner.outstanding}
           onClose={() => setSettlementPartner(null)}
           onSave={async (settlementData) => {

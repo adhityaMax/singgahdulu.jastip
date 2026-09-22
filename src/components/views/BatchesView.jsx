@@ -22,10 +22,7 @@ import React from 'react';
           <div key={b.id} className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
             <div className="flex justify-between items-start border-b border-slate-100 pb-3">
               <div>
-                <span className="text-[10px] bg-slate-100 font-mono font-bold text-slate-500 px-2 py-0.5 rounded">
-                  {b.id}
-                </span>
-                <h4 className="font-black text-slate-900 text-base mt-1">{b.name}</h4>
+                <h4 className="font-black text-slate-900 text-base">{b.name}</h4>
                 <p className="text-xs text-teal-700 font-semibold">{b.route}</p>
               </div>
               <select
@@ -33,7 +30,7 @@ import React from 'react';
                 onChange={async (e) => {
                   const newStatus = e.target.value;
                   try { await setBatches(batches.map((x) => (x.id === b.id ? { ...x, status: newStatus } : x)));
-                  triggerToast(`Status ${b.id} diubah ke ${newStatus}`); } catch (error) { triggerToast(error.message, 'error'); }
+                  triggerToast(`Status ${b.name} diubah ke ${newStatus}`); } catch (error) { triggerToast(error.message, 'error'); }
                 }}
                 className={`text-xs font-bold px-2.5 py-1 rounded-full focus:outline-none border-0 ${
                   b.status === 'ACTIVE'

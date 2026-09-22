@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Header({ settings, selectedBatchId, sidebarOpen, setSidebarOpen }) {
+export default function Header({ settings, batches, selectedBatchId, sidebarOpen, setSidebarOpen }) {
   return (
     <div className="md:hidden bg-slate-900 text-white p-4 flex items-center justify-between sticky top-0 z-40 border-b border-slate-800">
       <div className="flex items-center space-x-3">
@@ -9,7 +9,7 @@ export default function Header({ settings, selectedBatchId, sidebarOpen, setSide
         </div>
         <div>
           <h1 className="font-extrabold text-sm tracking-tight">{settings.storeName}</h1>
-          <p className="text-[10px] text-teal-400">Batch: {selectedBatchId}</p>
+          <p className="text-[10px] text-teal-400">Batch: {selectedBatchId === 'ALL' ? 'Semua Batch' : batches.find(batch => batch.id === selectedBatchId)?.name || 'Batch tidak ditemukan'}</p>
         </div>
       </div>
       <button

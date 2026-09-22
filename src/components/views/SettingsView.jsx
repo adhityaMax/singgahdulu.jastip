@@ -1,12 +1,30 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function SettingsView({ settings, setSettings, triggerToast }) {
   const [form, setForm] = useState(settings);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!logoFile) { setLogoPreview(''); return; }
+    const url = URL.createObjectURL(logoFile);
+    setLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logoFile]);
 
   const handleSave = async (e) => {
     e.preventDefault();
-    try { await setSettings(form); triggerToast('Pengaturan toko berhasil disimpan'); }
+    if (saving) return;
+    setSaving(true);
+    try {
+      const saved = await setSettings(form, logoFile);
+      setForm(saved);
+      setLogoFile(null);
+      triggerToast('Pengaturan toko berhasil disimpan');
+    }
     catch (error) { triggerToast(error.message, 'error'); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -60,22 +78,25 @@ export default function SettingsView({ settings, setSettings, triggerToast }) {
         </div>
 
         <div>
-          <label className="block font-bold text-slate-700 mb-1">URL Image Logo (Opsional)</label>
+          <label htmlFor="store-logo" className="block font-bold text-slate-700 mb-1">Logo Toko (Opsional)</label>
           <input
-            type="text"
-            placeholder="https://..."
-            value={form.logoUrl}
-            onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+            id="store-logo"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
             className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-700 focus:outline-none"
           />
+          <p className="mt-1 text-slate-500">PNG, JPG, atau WebP; maksimal 2 MB.</p>
+          {(logoPreview || form.logoUrl) && <img src={logoPreview || form.logoUrl} alt={logoPreview ? 'Pratinjau logo baru' : 'Logo toko saat ini'} className="mt-3 h-16 w-16 rounded-xl object-cover border border-slate-200" />}
         </div>
 
         <div className="pt-4 border-t border-slate-100 flex justify-end">
           <button
             type="submit"
+            disabled={saving}
             className="bg-teal-700 hover:bg-teal-800 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-sm"
           >
-            Simpan Perubahan Settings
+            {saving ? 'Menyimpan...' : 'Simpan Perubahan Settings'}
           </button>
         </div>
       </form>

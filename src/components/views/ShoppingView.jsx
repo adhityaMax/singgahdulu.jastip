@@ -1,18 +1,21 @@
 import React, { useMemo } from 'react';
 import { formatRp } from '../../utils/formatters';
+import { getOrderItems } from '../../utils/orderTotals';
 
 export default function ShoppingView({ orders, onToggleStatus, onChangeBuyer }) {
   const storesMap = useMemo(() => {
     const map = {};
     orders.forEach((o) => {
-      if (!map[o.store]) map[o.store] = [];
-      map[o.store].push(o);
+      getOrderItems(o).forEach(item => {
+        if (!map[item.store]) map[item.store] = [];
+        map[item.store].push({ order: o, item });
+      });
     });
     return map;
   }, [orders]);
 
-  const totalItems = orders.length;
-  const boughtItems = orders.filter((o) => o.itemStatus === 'DIBELI').length;
+  const totalItems = orders.reduce((sum, o) => sum + getOrderItems(o).length, 0);
+  const boughtItems = orders.filter((o) => o.itemStatus === 'DIBELI').reduce((sum, o) => sum + getOrderItems(o).length, 0);
 
   return (
     <div className="space-y-6">
@@ -44,9 +47,9 @@ export default function ShoppingView({ orders, onToggleStatus, onChangeBuyer }) 
               </div>
 
               <div className="space-y-2">
-                {storeOrders.map((o) => (
+                {storeOrders.map(({ order: o, item }, index) => (
                   <div
-                    key={o.id}
+                    key={`${o.id}-${index}`}
                     className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                       o.itemStatus === 'DIBELI'
                         ? 'bg-teal-50/50 border-teal-200'
@@ -55,10 +58,10 @@ export default function ShoppingView({ orders, onToggleStatus, onChangeBuyer }) 
                   >
                     <div>
                       <p className="font-bold text-xs text-slate-800">
-                        {o.item} <span className="text-teal-700 font-extrabold">x{o.qty}</span>
+                        {item.item}{item.variant ? ` (${item.variant})` : ''} <span className="text-teal-700 font-extrabold">x{item.qty}</span>
                       </p>
                       <p className="text-[11px] text-slate-500">
-                        Pemesan: <strong>{o.customer}</strong> (Harga Toko: {formatRp(o.price * o.qty)})
+                        Pemesan: <strong>{o.customer}</strong> (Harga Toko: {formatRp(Number(item.price) * Number(item.qty))})
                       </p>
                     </div>
 

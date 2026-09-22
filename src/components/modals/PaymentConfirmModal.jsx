@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { formatRp } from '../../utils/formatters';
+import { getOrderItems } from '../../utils/orderTotals';
 
 export default function PaymentConfirmModal({ payment, saving, error, onCancel, onConfirm }) {
   const dialogRef = useRef(null);
@@ -25,7 +26,7 @@ export default function PaymentConfirmModal({ payment, saving, error, onCancel, 
           <p className="mt-1 text-3xl font-extrabold tracking-tight text-teal-800">{formatRp(payment.remaining)}</p>
           <div className="mt-4 border-t border-teal-100 pt-3">
             <p className="break-words text-sm font-bold text-slate-900">{payment.order.customer}</p>
-            <p className="mt-1 break-words text-xs text-slate-500">{payment.order.item} &times; {payment.order.qty}</p>
+            <p className="mt-1 break-words text-xs text-slate-500">{getOrderItems(payment.order).map(item => `${item.item} × ${item.qty}`).join(', ')}</p>
           </div>
         </div>
         <p className="text-xs leading-relaxed text-slate-500">Status berubah menjadi <strong className="text-teal-700">LUNAS</strong>. Kas masuk dan sisa piutang akan diperbarui setelah pembayaran tersimpan.</p>

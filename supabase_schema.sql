@@ -39,15 +39,12 @@ CREATE TABLE IF NOT EXISTS public.batches (
 -- 3. TABEL ORDERS
 CREATE TABLE IF NOT EXISTS public.orders (
     id TEXT PRIMARY KEY,
+    order_no TEXT,
     batch_id TEXT REFERENCES public.batches(id) ON DELETE CASCADE,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     customer TEXT NOT NULL,
     phone TEXT,
-    item TEXT NOT NULL,
-    store TEXT NOT NULL,
-    price NUMERIC NOT NULL DEFAULT 0,
-    fee NUMERIC NOT NULL DEFAULT 0,
-    qty INT NOT NULL DEFAULT 1,
+    items JSONB NOT NULL CHECK (jsonb_typeof(items) = 'array' AND jsonb_array_length(items) > 0),
     pay_status TEXT NOT NULL DEFAULT 'LUNAS',
     dp_amount NUMERIC DEFAULT 0,
     item_status TEXT NOT NULL DEFAULT 'PENDING',

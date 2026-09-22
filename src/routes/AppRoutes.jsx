@@ -1,5 +1,6 @@
 import React from 'react';
 import { payOffOrder } from '../services/orderService';
+import { displayOrderNumber } from '../utils/orderNumber';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 
 import DashboardView from '../components/views/DashboardView';
@@ -22,6 +23,7 @@ export default function AppRoutes({
   settings,
   setSettings,
   triggerToast,
+  confirmDelete,
   setEditingOrder,
   setShowOrderModal,
   setShowExpenseModal,
@@ -96,7 +98,7 @@ export default function AppRoutes({
               setShowBatchModal(true);
             }}
             onDelete={(batch) => mutate(async () => {
-              if (!window.confirm(`Hapus ${batch.name}? Order dan biaya terkait juga akan dihapus.`)) return;
+              if (!await confirmDelete(`Batch ${batch.name} beserta pesanan dan biaya terkait akan dihapus.`)) return;
               await deleteBatchFromDb(batch.id);
               setSettlements(allSettlements.filter(item => item.batchId !== batch.id));
               const updatedBatches = batches.filter((item) => item.id !== batch.id);
@@ -128,6 +130,8 @@ export default function AppRoutes({
               setShowOrderModal(true);
             }}
             onDelete={(id) => mutate(async () => {
+              const order = orders.find(item => item.id === id);
+              if (!await confirmDelete(`Pesanan ${order ? displayOrderNumber(order) : ''} akan dihapus.`)) return;
               await deleteOrderFromDb(id);
               setOrders(orders.filter((o) => o.id !== id));
               triggerToast('Pesanan berhasil dihapus');
@@ -157,6 +161,8 @@ export default function AppRoutes({
             expenses={filteredExpenses}
             batches={batches}
             onDelete={(id) => mutate(async () => {
+              const expense = expenses.find(item => item.id === id);
+              if (!await confirmDelete(`Biaya ${expense?.category || ''} akan dihapus.`)) return;
               await deleteExpenseFromDb(id);
               setExpenses(expenses.filter((e) => e.id !== id));
               triggerToast('Biaya berhasil dihapus');

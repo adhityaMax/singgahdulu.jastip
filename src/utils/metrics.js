@@ -1,3 +1,5 @@
+import { getOrderTotals } from './orderTotals.js';
+
 /**
  * Calculates financial metrics for orders and expenses.
  * @param {Array} orders List of order objects
@@ -12,9 +14,8 @@ export function calculateMetrics(orders, expenses) {
   let totalRemainingUnpaid = 0;
 
   orders.forEach((o) => {
-    const itemSubtotal = (o.price + o.fee) * o.qty;
-    const itemModal = o.price * o.qty;
-    const itemFee = o.fee * o.qty;
+    const { price: itemModal, fee: itemFee } = getOrderTotals(o);
+    const itemSubtotal = itemModal + itemFee;
 
     totalOmset += itemSubtotal;
     totalModal += itemModal;
@@ -43,7 +44,7 @@ export function calculateMetrics(orders, expenses) {
 
   orders.forEach((o) => {
     if (o.itemStatus === 'DIBELI') {
-      const itemModal = o.price * o.qty;
+      const itemModal = getOrderTotals(o).price;
       if (o.buyer === 'Umay') spentByUmay += itemModal;
       else if (o.buyer === 'Adhit') spentByAdhit += itemModal;
       else spentByKas += itemModal;

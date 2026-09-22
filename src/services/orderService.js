@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
 import { formatOrderFromDb, formatOrderToDb } from '../models/orderModel';
+import { getOrderTotal } from '../utils/orderTotals';
 
 export async function fetchOrdersFromSupabase() {
   if (!isSupabaseConfigured || !supabase) return null;
@@ -13,11 +14,14 @@ export async function fetchOrdersFromSupabase() {
 export async function upsertOrderToSupabase(order) {
   if (!isSupabaseConfigured || !supabase) return false;
   const payload = formatOrderToDb(order);
-  const { error } = await supabase.from('orders').upsert(payload);
+  const query = order.orderNo
+    ? supabase.from('orders').update(payload).eq('id', order.id)
+    : supabase.from('orders').insert(payload);
+  const { data, error } = await query.select('*').single();
   if (error) {
     throw error;
   }
-  return true;
+  return formatOrderFromDb(data);
 }
 
 export async function deleteOrderFromSupabase(id) {
@@ -31,7 +35,7 @@ export async function deleteOrderFromSupabase(id) {
 
 // Update hanya kolom pembayaran, bukan seluruh isi pesanan.
 export async function payOffOrder(order) {
-  const total = (Number(order.price) + Number(order.fee)) * Number(order.qty);
+  const total = getOrderTotal(order);
   if (!Number.isFinite(total) || total < 0) throw new Error('Total tagihan tidak valid.');
   if (order.payStatus === 'LUNAS') return order;
   if (!isSupabaseConfigured || !supabase) return { ...order, payStatus: 'LUNAS', dpAmount: total };
@@ -39,7 +43,7 @@ export async function payOffOrder(order) {
     .update({ pay_status: 'LUNAS', dp_amount: total })
     .eq('id', order.id)
     .eq('pay_status', order.payStatus)
-    .eq('price', order.price).eq('fee', order.fee).eq('qty', order.qty)
+    .eq('items', JSON.stringify(order.items))
     .select('*').maybeSingle();
   if (error) throw error;
   if (!data) throw new Error('Pesanan sudah berubah atau tidak dapat diakses. Muat ulang halaman sebelum mencoba lagi.');

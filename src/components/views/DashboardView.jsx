@@ -1,5 +1,7 @@
 import React from 'react';
 import { formatRp } from '../../utils/formatters';
+import { getOrderTotal, getOrderItems } from '../../utils/orderTotals';
+import { displayOrderNumber } from '../../utils/orderNumber';
 
 export default function DashboardView({ metrics, orders, settings, onNavigate }) {
   return (
@@ -209,18 +211,18 @@ export default function DashboardView({ metrics, orders, settings, onNavigate })
             </thead>
             <tbody className="divide-y divide-slate-100">
               {orders.slice(0, 5).map((o) => {
-                const total = (o.price + o.fee) * o.qty;
+                const total = getOrderTotal(o);
                 return (
                   <tr key={o.id} className="hover:bg-slate-50">
                     <td className="py-3 px-4 font-bold text-slate-800">
-                      {o.id}
+                      {displayOrderNumber(o)}
                       <br />
                       <span className="text-slate-500 font-normal">{o.customer}</span>
                     </td>
                     <td className="py-3 px-4">
-                      {o.item} <span className="font-bold text-teal-700">x{o.qty}</span>
+                      {getOrderItems(o).map((item, i) => <span key={i} className="block">{item.item}{item.variant ? ` (${item.variant})` : ''} <span className="font-bold text-teal-700">x{item.qty}</span></span>)}
                     </td>
-                    <td className="py-3 px-4 text-slate-600">{o.store}</td>
+                    <td className="py-3 px-4 text-slate-600">{[...new Set(getOrderItems(o).map(item => item.store))].join(', ')}</td>
                     <td className="py-3 px-4">
                       <div className="font-bold text-slate-900">{formatRp(total)}</div>
                       <span

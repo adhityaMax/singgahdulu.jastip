@@ -37,7 +37,7 @@ export default function ExpensesView({ expenses, batches, onDelete, onOpenNew })
                 <tr key={e.id} className="hover:bg-slate-50">
                   <td className="py-3 px-4 font-medium text-slate-600">{e.date}</td>
                   <td className="py-3 px-4 font-medium text-slate-600">
-                    {batches.find((batch) => batch.id === e.batchId)?.name || e.batchId || '-'}
+                    {batches.find((batch) => batch.id === e.batchId)?.name || 'Batch tidak ditemukan'}
                   </td>
                   <td className="py-3 px-4">
                     <span className="bg-amber-50 text-amber-800 text-[10px] px-2.5 py-1 rounded-full font-bold">

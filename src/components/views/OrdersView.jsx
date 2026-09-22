@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useRef } from 'react';
 import PaymentConfirmModal from '../modals/PaymentConfirmModal';
 import { formatRp } from '../../utils/formatters';
+import { getOrderTotal, getOrderItems } from '../../utils/orderTotals';
+import { displayOrderNumber } from '../../utils/orderNumber';
 
 export default function OrdersView({ orders, batches, onEdit, onDelete, onToggleStatus, onOpenNew, onPayOff }) {
   const [payment, setPayment] = useState(null);
@@ -27,8 +29,8 @@ export default function OrdersView({ orders, batches, onEdit, onDelete, onToggle
     return orders.filter((o) => {
       const matchText =
         o.customer.toLowerCase().includes(search.toLowerCase()) ||
-        o.item.toLowerCase().includes(search.toLowerCase()) ||
-        o.store.toLowerCase().includes(search.toLowerCase());
+        displayOrderNumber(o).toLowerCase().includes(search.toLowerCase()) ||
+        getOrderItems(o).some(item => item.item.toLowerCase().includes(search.toLowerCase()) || item.store.toLowerCase().includes(search.toLowerCase()));
       const matchStatus = statusFilter === 'ALL' || o.payStatus === statusFilter;
       return matchText && matchStatus;
     });
@@ -90,14 +92,14 @@ export default function OrdersView({ orders, batches, onEdit, onDelete, onToggle
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {filtered.map((o) => {
-                const total = (Number(o.price) + Number(o.fee)) * Number(o.qty);
+                const total = getOrderTotal(o);
                 const remaining = Math.max(0, total - (o.payStatus === 'LUNAS' ? total : o.payStatus === 'DP' ? Number(o.dpAmount || 0) : 0));
                 return (
                   <tr key={o.id} className="hover:bg-slate-50">
                     <td className="py-3.5 px-4 font-bold text-slate-800">
-                      {o.id}
+                      {displayOrderNumber(o)}
                       <br />
-                      <span className="text-[10px] text-teal-700 font-semibold">{o.batchId}</span>
+                      <span className="block max-w-40 break-words text-[10px] text-teal-700 font-semibold">{batches.find(batch => batch.id === o.batchId)?.name || 'Batch tidak ditemukan'}</span>
                     </td>
                     <td className="py-3.5 px-4 font-medium text-slate-900">
                       {o.customer}
@@ -105,9 +107,9 @@ export default function OrdersView({ orders, batches, onEdit, onDelete, onToggle
                       <span className="text-[10px] text-slate-400">{o.phone || '-'}</span>
                     </td>
                     <td className="py-3.5 px-4">
-                      {o.item} <span className="font-extrabold text-teal-700">x{o.qty}</span>
+                      {getOrderItems(o).map((item, i) => <span key={i} className="block">{item.item}{item.variant ? ` (${item.variant})` : ''} <span className="font-extrabold text-teal-700">x{item.qty}</span></span>)}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600">{o.store}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{[...new Set(getOrderItems(o).map(item => item.store))].join(', ')}</td>
                     <td className="py-3.5 px-4 font-extrabold text-slate-900">{formatRp(total)}</td>
                     <td className="py-3.5 px-4">
                       {o.payStatus === 'LUNAS' ? (
